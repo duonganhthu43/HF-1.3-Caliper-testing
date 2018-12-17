@@ -216,7 +216,7 @@ function buildChaincodeProposal(client, the_user, chaincode, upgrade, transientM
  * @async
  */
 async function instantiateChaincode(chaincode, endorsement_policy, upgrade){
-    Client.setConfigSetting('request-timeout', 120000);
+    Client.setConfigSetting('request-timeout', 86400000);
 
     let channel = testUtil.getChannel(chaincode.channel);
     if(channel === null) {
@@ -283,14 +283,14 @@ async function instantiateChaincode(chaincode, endorsement_policy, upgrade){
 
     // an event listener can only register with a peer in its own org
     data = fs.readFileSync(commUtils.resolvePath(ORGS[userOrg][eventPeer].tls_cacerts));
-    let eh = client.newEventHub();
-    eh.setPeerAddr(
-        ORGS[userOrg][eventPeer].events,
+    let eh = channel.newChannelEventHub(
+    client.newPeer(
+        ORGS[userOrg][eventPeer].requests,
         {
             pem: Buffer.from(data).toString(),
             'ssl-target-name-override': ORGS[userOrg][eventPeer]['server-hostname']
         }
-    );
+    ));
     eh.connect();
     eventhubs.push(eh);
 
@@ -495,9 +495,9 @@ async function getcontext(channelConfig, clientIdx) {
 
         // an event listener can only register with the peer in its own org
         if(org === userOrg) {
-            let eh = client.newEventHub();
-            eh.setPeerAddr(
-                peerInfo.events,
+            let eh = channel.newChannelEventHub(
+            client.newPeer(
+                peerInfo.requests,
                 {
                     pem: Buffer.from(data).toString(),
                     'ssl-target-name-override': peerInfo['server-hostname'],
@@ -506,7 +506,7 @@ async function getcontext(channelConfig, clientIdx) {
                     'grpc.keepalive_time_ms' : 360000   // time to wait for ping response, 6 minutes
                     // 'grpc.http2.keepalive_time' : 15
                 }
-            );
+            ));
             eventhubs.push(eh);
         }
     }
