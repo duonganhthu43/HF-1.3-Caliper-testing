@@ -22,7 +22,7 @@ const fs = require('fs-extra');
 const util = require('util');
 
 const Client = require('fabric-client');
-const copService = require('fabric-ca-client/lib/FabricCAClientImpl.js');
+const copService = require('fabric-ca-client/lib/FabricCAServices.js');
 const User = require('fabric-client/lib/User.js');
 
 const Constants = require('./constant.js');
@@ -33,35 +33,35 @@ let channels = [];
 let cryptodir;
 let ORGS;
 
-module.exports.getChannel = function(name) {
-    for(let i in channels) {
-        if(channels[i].name === name) {
+module.exports.getChannel = function (name) {
+    for (let i in channels) {
+        if (channels[i].name === name) {
             return channels[i];
         }
     }
     return null;
 };
 
-module.exports.getDefaultChannel = function() {
+module.exports.getDefaultChannel = function () {
     return channels[0];
 };
 
 // all temporary files and directories are created under here
 const tempdir = Constants.tempdir;
 
-module.exports.getTempDir = function() {
+module.exports.getTempDir = function () {
     fs.ensureDirSync(tempdir);
     return tempdir;
 };
 
 // directory for file based KeyValueStore
 module.exports.KVS = path.join(tempdir, 'hfc-test-kvs');
-module.exports.storePathForOrg = function(org) {
+module.exports.storePathForOrg = function (org) {
     return module.exports.KVS + '_' + org;
 };
 
 // temporarily set $GOPATH to the test fixture folder unless specified otherwise
-module.exports.setupChaincodeDeploy = function() {
+module.exports.setupChaincodeDeploy = function () {
     if (typeof process.env.OVERWRITE_GOPATH === 'undefined' ||
         process.env.OVERWRITE_GOPATH.toString().toUpperCase() === 'TRUE') {
         process.env.GOPATH = commUtils.resolvePath('.');
@@ -70,12 +70,12 @@ module.exports.setupChaincodeDeploy = function() {
 
 // specifically set the values to defaults because they may have been overridden when
 // running in the overall test bucket ('gulp test')
-module.exports.resetDefaults = function() {
+module.exports.resetDefaults = function () {
     global.hfc.config = undefined;
     require('nconf').reset();
 };
 
-module.exports.cleanupDir = function(keyValStorePath) {
+module.exports.cleanupDir = function (keyValStorePath) {
     const absPath = path.join(process.cwd(), keyValStorePath);
     const exists = module.exports.existsSync(absPath);
     if (exists) {
@@ -83,15 +83,15 @@ module.exports.cleanupDir = function(keyValStorePath) {
     }
 };
 
-module.exports.getUniqueVersion = function(prefix) {
-    if (!prefix) {prefix = 'v';}
+module.exports.getUniqueVersion = function (prefix) {
+    if (!prefix) { prefix = 'v'; }
     return prefix + Date.now();
 };
 
 // utility function to check if directory or file exists
 // uses entire / absolute path from root
-module.exports.existsSync = function(absolutePath /*string*/) {
-    try  {
+module.exports.existsSync = function (absolutePath /*string*/) {
+    try {
         const stat = fs.statSync(absolutePath);
         return stat.isDirectory() || stat.isFile();
     }
@@ -108,10 +108,8 @@ module.exports.existsSync = function(absolutePath /*string*/) {
 function readFile(path) {
     return new Promise((resolve, reject) => {
         fs.readFile(path, (err, data) => {
-            if (err)
-            {reject(new Error('Failed to read file ' + path + ' due to error: ' + err));}
-            else
-            {resolve(data);}
+            if (err) { reject(new Error('Failed to read file ' + path + ' due to error: ' + err)); }
+            else { resolve(data); }
         });
     });
 }
@@ -125,7 +123,7 @@ function readAllFiles(dir) {
     const files = fs.readdirSync(dir);
     const certs = [];
     files.forEach((file_name) => {
-        let file_path = path.join(dir,file_name);
+        let file_path = path.join(dir, file_name);
         let data = fs.readFileSync(file_path);
         certs.push(data);
     });
@@ -134,9 +132,11 @@ function readAllFiles(dir) {
 
 module.exports.readFile = readFile;
 
-module.exports.init = function(config_path) {
+module.exports.init = function (config_path) {
     Client.addConfigFile(config_path);
-    const fa = Client.getConfigSetting('fabric');
+    //const fa = Client.getConfigSetting('fabric');
+    //const fa = Client.getConfigSetting(config_path);
+    const fa = commUtils.parseYaml(config_path).fabric;
     ORGS = fa.network;
     channels = fa.channel;
     cryptodir = commUtils.resolvePath(fa.cryptodir);
@@ -167,7 +167,7 @@ async function getMember(username, password, client, userOrg) {
     if (!cryptoSuite) {
         cryptoSuite = Client.newCryptoSuite();
         if (userOrg) {
-            cryptoSuite.setCryptoKeyStore(Client.newCryptoKeyStore({path: module.exports.storePathForOrg(ORGS[userOrg].name)}));
+            cryptoSuite.setCryptoKeyStore(Client.newCryptoKeyStore({ path: module.exports.storePathForOrg(ORGS[userOrg].name) }));
             client.setCryptoSuite(cryptoSuite);
         }
     }
@@ -204,12 +204,12 @@ async function getMember(username, password, client, userOrg) {
  */
 async function getAdmin(client, userOrg) {
     try {
-        if(!ORGS.hasOwnProperty(userOrg)) {
+        if (!ORGS.hasOwnProperty(userOrg)) {
             throw new Error('Could not found ' + userOrg + ' in configuration');
         }
         const org = ORGS[userOrg];
         let keyPEM, certPEM;
-        if(org.user) {
+        if (org.user) {
             keyPEM = fs.readFileSync(commUtils.resolvePath(org.user.key));
             certPEM = fs.readFileSync(commUtils.resolvePath(org.user.cert));
         }
@@ -219,24 +219,24 @@ async function getAdmin(client, userOrg) {
             let basePath = path.join(cryptodir, 'peerOrganizations', domain, 'users', util.format('Admin@%s', domain));
 
             let keyPath = path.join(basePath, 'keystore');
-            if(!fs.existsSync(keyPath)) {
+            if (!fs.existsSync(keyPath)) {
                 keyPath = path.join(basePath, 'msp', 'keystore');
             }
             keyPEM = readAllFiles(keyPath)[0];
 
             let certPath = path.join(basePath, 'signcerts');
-            if(!fs.existsSync(certPath)) {
+            if (!fs.existsSync(certPath)) {
                 certPath = path.join(basePath, 'msp', 'signcerts');
             }
             certPEM = readAllFiles(certPath)[0];
         }
 
         const cryptoSuite = Client.newCryptoSuite();
-        cryptoSuite.setCryptoKeyStore(Client.newCryptoKeyStore({path: module.exports.storePathForOrg(ORGS[userOrg].name)}));
+        cryptoSuite.setCryptoKeyStore(Client.newCryptoKeyStore({ path: module.exports.storePathForOrg(ORGS[userOrg].name) }));
         client.setCryptoSuite(cryptoSuite);
 
         return await client.createUser({
-            username: 'peer'+userOrg+'Admin',
+            username: 'peer' + userOrg + 'Admin',
             mspid: org.mspid,
             cryptoContent: {
                 privateKeyPEM: keyPEM.toString(),
@@ -244,7 +244,7 @@ async function getAdmin(client, userOrg) {
             }
         });
     }
-    catch(err) {
+    catch (err) {
         commLogger.error(`Couldn't retrieve admin of ${userOrg}: ${err.stack ? err.stack : err}`);
         throw err;
     }
@@ -257,13 +257,13 @@ async function getAdmin(client, userOrg) {
  */
 async function getOrdererAdmin(client) {
     try {
-        if(!ORGS.orderer) {
+        if (!ORGS.orderer) {
             throw new Error('Could not found orderer in configuration');
         }
 
         const orderer = ORGS.orderer;
         let keyPEM, certPEM;
-        if(orderer.user) {
+        if (orderer.user) {
             keyPEM = fs.readFileSync(commUtils.resolvePath(orderer.user.key));
             certPEM = fs.readFileSync(commUtils.resolvePath(orderer.user.cert));
         }
@@ -273,12 +273,12 @@ async function getOrdererAdmin(client) {
             let basePath = path.join(cryptodir, 'ordererOrganizations', domain, 'users', util.format('Admin@%s', domain));
 
             let keyPath = path.join(basePath, 'keystore');
-            if(!fs.existsSync(keyPath)) {
+            if (!fs.existsSync(keyPath)) {
                 keyPath = path.join(basePath, 'msp', 'keystore');
             }
             keyPEM = readAllFiles(keyPath)[0];
             let certPath = path.join(basePath, 'signcerts');
-            if(!fs.existsSync(certPath)) {
+            if (!fs.existsSync(certPath)) {
                 certPath = path.join(basePath, 'msp', 'signcerts');
             }
             certPEM = readAllFiles(certPath)[0];
@@ -293,7 +293,7 @@ async function getOrdererAdmin(client) {
             }
         });
     }
-    catch(err) {
+    catch (err) {
         commLogger.error(`Couldn't retrieve admin of orderer org: ${err.stack ? err.stack : err}`);
         throw err;
     }
@@ -301,12 +301,12 @@ async function getOrdererAdmin(client) {
 
 
 
-module.exports.getOrderAdminSubmitter = function(client) {
+module.exports.getOrderAdminSubmitter = function (client) {
     return getOrdererAdmin(client);
 };
 
-module.exports.getSubmitter = async function(client, peerOrgAdmin, org) {
-    if (arguments.length < 2) {throw new Error('"client" and "test" are both required parameters');}
+module.exports.getSubmitter = async function (client, peerOrgAdmin, org) {
+    if (arguments.length < 2) { throw new Error('"client" and "test" are both required parameters'); }
 
     let peerAdmin, userOrg;
     if (typeof peerOrgAdmin === 'boolean') {
