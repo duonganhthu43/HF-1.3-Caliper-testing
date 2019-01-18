@@ -120,7 +120,7 @@ services:
 
   couchdb.peer0.org1.example.com:
     container_name: couchdb.peer0.org1.example.com
-    image: hyperledger/fabric-couchdb:x86_64-0.4.6
+    image: hyperledger/fabric-couchdb:latest
     ports:
       - 5984:5984
     environment:
@@ -166,7 +166,7 @@ services:
   
   couchdb.peer0.org2.example.com:
     container_name: couchdb.peer0.org2.example.com
-    image: hyperledger/fabric-couchdb:x86_64-0.4.6
+    image: hyperledger/fabric-couchdb:latest
     ports:
       - 5985:5984
     environment:
@@ -212,7 +212,7 @@ services:
       
   couchdb.peer0.org3.example.com:
     container_name: couchdb.peer0.org3.example.com
-    image: hyperledger/fabric-couchdb:x86_64-0.4.6
+    image: hyperledger/fabric-couchdb:latest
     ports:
       - 5986:5984
     environment:
